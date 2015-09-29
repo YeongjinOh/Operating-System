@@ -11,6 +11,7 @@
 #include "threads/switch.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
+#include "devices/timer.h"
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
@@ -23,6 +24,9 @@
 /* List of processes in THREAD_READY state, that is, processes
    that are ready to run but not actually running */
 static struct list ready_list;
+
+/* List of processes in THREAD_WAIT state */
+static struct list wait_list;
 
 /* List of all processes.  Processes are added to this list
    when they are first scheduled and removed when they exit. */
@@ -91,6 +95,7 @@ thread_init (void)
 
   lock_init (&tid_lock);
   list_init (&ready_list);
+  list_init (&wait_list);
   list_init (&all_list);
 
   /* Set up a thread structure for the running thread. */
@@ -439,6 +444,15 @@ running_thread (void)
   return pg_round_down (esp);
 }
 
+void thread_sleep(int64_t ticks){
+  struct thread *cur = thread_current ();
+  cur -> wait_flag = true;
+  cur -> wait_start = timer_ticks();
+  cur -> wait_length = ticks;
+
+  list_push_back (&wait_list, &cur->elem);
+}
+
 /* Returns true if T appears to point to a valid thread. */
 static bool
 is_thread (struct thread *t)
@@ -490,6 +504,9 @@ alloc_frame (struct thread *t, size_t size)
 static struct thread *
 next_thread_to_run (void) 
 {
+  if((e = list_begin(&wait_list)->wait_flag)==false){
+    list_push_back(&ready_list, e->elem)
+  }   
   if (list_empty (&ready_list))
     return idle_thread;
   else
