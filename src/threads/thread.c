@@ -122,6 +122,17 @@ thread_start (void)
   sema_down (&idle_started);
 }
 
+///* Compare the priority between A and B, and return boolean value of whether priority of A > that of B *///
+static bool
+priority_compare(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED)
+{
+        struct thread *thread_a = list_entry (a, struct thread, elem);
+        struct thread *thread_b = list_entry (b, struct thread, elem);
+
+        return thread_a->priority > thread_b->priority;
+}
+
+
 /* Called by the timer interrupt handler at each timer tick.
    Thus, this function runs in an external interrupt context. */
 void
@@ -140,8 +151,9 @@ thread_tick (void)
     kernel_ticks++;
 
   /* Enforce preemption. */
-  if (++thread_ticks >= TIME_SLICE)
-    intr_yield_on_return ();
+ ///* Since we use priority scheduling instaed of Round Robin, we don't need the below statements. *///
+//  if (++thread_ticks >= TIME_SLICE)
+//    intr_yield_on_return ();
 }
 
 /* Prints thread statistics. */
@@ -240,12 +252,15 @@ thread_unblock (struct thread *t)
 
   ASSERT (is_thread (t));
 
-  old_level = intr_disable ();
-  ASSERT (t->status == THREAD_BLOCKED);
-  list_push_back (&ready_list, &t->elem);
+  ///* Implement priority scheduling *///
+  list_insert_ordered (&ready_list, &t->elem, priority_compare,NULL);
   t->status = THREAD_READY;
+  if (thread_current () != idle_thread)
+        thread_yield ();
+
   intr_set_level (old_level);
 }
+
 
 /* Returns the name of the running thread. */
 const char *
@@ -313,11 +328,14 @@ thread_yield (void)
 
   old_level = intr_disable ();
   if (cur != idle_thread) 
-    list_push_back (&ready_list, &cur->elem);
+        ///* Implement priority scheduling *///
+        list_insert_ordered (&ready_list, &cur->elem, priority_compare, NULL);
+
   cur->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
 }
+
 
 /* Invoke function 'func' on all threads, passing along 'aux'.
    This function must be called with interrupts off. */
@@ -504,9 +522,11 @@ alloc_frame (struct thread *t, size_t size)
 static struct thread *
 next_thread_to_run (void) 
 {
-  if((e = list_begin(&wait_list)->wait_flag)==false){
-    list_push_back(&ready_list, e->elem)
-  }   
+///* needed to be modified *///
+//  if((e = list_begin(&wait_list)->wait_flag)==false){
+//    list_push_back(&ready_list, e->elem)
+//  }   
+
   if (list_empty (&ready_list))
     return idle_thread;
   else
