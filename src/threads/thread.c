@@ -473,13 +473,33 @@ running_thread (void)
   return pg_round_down (esp);
 }
 
+static bool
+thread_wait_cmp (const struct list_elem *a,
+                 const struct list_elem *b,
+                 void *aux UNUSED)
+{
+  return list_entry(a, struct thread, wait_elem) -> wait_length <
+         list_entry(b, struct thread, wait_elem) -> wait_length;
+}
+
 void thread_sleep(int64_t ticks){
   struct thread *cur = thread_current ();
+
+  /* disable interrupt to manipulate wait_list and avoid race conditions */
+  enum intr_level old_level = intr_disable();
+
+  /* set up wakeup time appropriately */
+  /* wakeup time is time until thread needs to wake up from sleep to awake */  
   cur -> wait_flag = true;
   cur -> wait_start = timer_ticks();
   cur -> wait_length = ticks;
 
-  list_push_back (&wait_list, &cur->elem);
+  /* add thread to wait_list */
+  list_insert_ordered (&wait_list, &cur->wait_elem, thread_wait_cmp, NULL);
+
+  /* block thread */
+  thread_block();
+  intr_set_level(old_level);
 }
 
 /* Returns true if T appears to point to a valid thread. */
