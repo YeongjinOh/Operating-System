@@ -364,7 +364,7 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority) 
 {
-  thread_current ()->prev_priority = thread_current()->priority;
+  thread_current ()->prev_priority = new_priority;
   thread_current ()->priority = new_priority;
   
   /* For priority scheduling when priority donation occurs */
@@ -534,10 +534,10 @@ alloc_frame (struct thread *t, size_t size)
 static struct thread *
 next_thread_to_run (void) 
 {
-  struct thread *t = (struct thread *) list_begin(&wait_list);
-  if (t->wait_flag == false) {
-    list_push_back(&ready_list, &t->elem);
-  }   
+//  struct thread *t = (struct thread *) list_begin(&wait_list);
+//  if (t->wait_flag == false) {
+//    list_push_back(&ready_list, &t->elem);
+//  }   
 
   if (list_empty (&ready_list))
     return idle_thread;
