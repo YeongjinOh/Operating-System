@@ -105,6 +105,8 @@ struct thread
     int64_t wait_start;
     int64_t wait_length;
 
+	/* For priority donation */
+	int prev_priority;
   };
 
 /* If false (default), use round-robin scheduler.
@@ -114,6 +116,8 @@ extern bool thread_mlfqs;
 
 void thread_init (void);
 void thread_start (void);
+
+bool priority_compare(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
 
 void thread_tick (void);
 void thread_print_stats (void);
