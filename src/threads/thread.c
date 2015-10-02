@@ -473,25 +473,35 @@ running_thread (void)
   return pg_round_down (esp);
 }
 
-static bool
+bool
 thread_wait_cmp (const struct list_elem *a,
                  const struct list_elem *b,
                  void *aux UNUSED)
 {
-  return list_entry(a, struct thread, wait_elem) -> wait_length <
-         list_entry(b, struct thread, wait_elem) -> wait_length;
+  return list_entry(a, struct thread, wait_elem)->wait_length <
+         list_entry(b, struct thread, wait_elem)->wait_length;
+/*
+  struct *ta = list_entry(a, struct thread, wait_elem);
+  struct *tb = list_entry(b, struct thread, wait_elem);
+  if (ta -> wait_length < tb -> wait_length)
+    return true;
+  else
+    return false; 
+*/
 }
 
-void thread_sleep(int64_t ticks){
-  struct thread *cur = thread_current ();
-
-  /* disable interrupt to manipulate wait_list and avoid race conditions */
+// ticks = start = timer_ticks() + ticks from timer_sleep()
+void thread_sleep(int64_t ticks)
+{
+  ASSERT(thread_current() != idle_thread);
   enum intr_level old_level = intr_disable();
-
+  
+  struct thread *cur = thread_current ();
   /* set up wakeup time appropriately */
   /* wakeup time is time until thread needs to wake up from sleep to awake */  
   cur -> wait_flag = true;
   cur -> wait_start = timer_ticks();
+  printf("timer_ticks value: %d", timer_ticks());
   cur -> wait_length = ticks;
 
   /* add thread to wait_list */
@@ -554,6 +564,7 @@ alloc_frame (struct thread *t, size_t size)
 static struct thread *
 next_thread_to_run (void) 
 {
+
   struct thread *t = (struct thread *) list_begin(&wait_list);
   if (t->wait_flag == false) {
     list_push_back(&ready_list, &t->elem);
