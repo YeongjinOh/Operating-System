@@ -101,9 +101,11 @@ struct thread
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
 
-    bool wait_flag;
-    int64_t wait_start;
-    int64_t wait_length;
+    /* added variables for alarm clock */
+    bool wait_flag;          // current status of thread in waiting
+    int64_t wait_start;      // beginning time that thread first started to wait
+    int64_t wait_length;     // time thread needs to spend waiting 
+
 
 	/* For priority donation */
 	int prev_priority;
