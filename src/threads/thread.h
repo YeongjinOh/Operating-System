@@ -106,7 +106,6 @@ struct thread
     int64_t wait_start;      // beginning time that thread first started to wait
     int64_t wait_length;     // time thread needs to spend waiting 
 
-    struct list_elem wait_elem;
 
 	/* For priority donation */
 	int prev_priority;

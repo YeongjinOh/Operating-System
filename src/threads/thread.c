@@ -494,16 +494,17 @@ thread_wait_cmp (const struct list_elem *a,
 }*/
 
 // ticks = start = timer_ticks() + ticks from timer_sleep()
+
 void thread_sleep(int64_t sleep_ticks)
-{
-//  ASSERT(thread_current() != idle_thread);
-//  enum intr_level old_level = intr_disable();
- 
+{ 
   struct thread *t = thread_current();
-  list_push_front(&wait_list, &t -> elem);
+  t -> wait_length = sleep_ticks; //sleep_ticks = timer_ticks() + ticks from sleep_timer
+  
+  // insert in sorted order to remove threads with higher prio
+  list_insert_ordered (&wait_list, &t -> elem, priority_compare, NULL);
   thread_block();
-/*
- 
+
+/* 
   struct thread *cur = thread_current ();
   // set up wait_length and wait_start appropriately 
   // wait_length is time until thread needs to wake up from sleep to awake 
