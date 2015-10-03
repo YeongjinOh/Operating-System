@@ -105,7 +105,7 @@ struct thread
     unsigned magic;                     /* Detects stack overflow. */
 
     /* added variables for alarm clock */
-    int64_t wait_length;     // time thread needs to spend waiting 
+    int64_t wait_time;     // time when thread stops waiting 
 
 
 	/* For priority donation */
