@@ -126,10 +126,10 @@ thread_start (void)
 bool
 priority_compare(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED)
 {
-        struct thread *thread_a = list_entry (a, struct thread, elem);
-        struct thread *thread_b = list_entry (b, struct thread, elem);
+  struct thread *thread_a = list_entry (a, struct thread, elem);
+  struct thread *thread_b = list_entry (b, struct thread, elem);
 
-        return thread_a->priority > thread_b->priority;
+  return thread_a->priority > thread_b->priority;
 }
 
 /* Called by the timer interrupt handler at each timer tick.
@@ -153,10 +153,6 @@ thread_tick (void)
   /* Since we use priority scheduling instead of Round Robin, we don't need the below statements. */
   // if (++thread_ticks >= TIME_SLICE)
   //   intr_yield_on_return ();
-  
-  if(++thread_ticks >= TIME_SLICE)
-    intr_yield_on_return ();
-
 }
 
 /* Prints thread statistics. */
@@ -221,6 +217,9 @@ thread_create (const char *name, int priority,
   /* Add to run queue. */
   thread_unblock (t);
 
+  if (thread_current ()->priority < t->priority)
+	thread_yield ();
+
   return tid;
 }
 
@@ -258,23 +257,17 @@ thread_unblock (struct thread *t)
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
 
-  list_push_back(&ready_list, &t->elem);
-  t->status = THREAD_READY;
-  intr_set_level(old_level);
-
-/*****
   // Implement priority scheduling 
   list_insert_ordered (&ready_list, &t->elem, priority_compare, NULL);
   t->status = THREAD_READY;
 
-  // unblocked thread preempts according to priority 
+  /*// unblocked thread preempts according to priority 
   if (thread_current () != idle_thread) {
   	if (thread_current ()->priority < t->priority)
 	  thread_yield (); // preemption
-  }
+  }*/
 
   intr_set_level (old_level);
-*/
 }
 
 /* Returns the name of the running thread. */
@@ -634,18 +627,19 @@ thread_schedule_tail (struct thread *prev)
 }
 
 void
-thread_wakeup(void){
+thread_wakeup(void)
+{
   struct list_elem *e;
   int64_t current_time = timer_ticks();
   
-  for(e=list_begin(&wait_list); e != list_end(&wait_list); ){
+  for(e=list_begin(&wait_list); e != list_end(&wait_list);) {
     struct thread *t = list_entry(e, struct thread, elem);
     
-    if(t -> wait_length <= current_time){
+    if (t -> wait_length <= current_time) {
       e=list_remove(e);
       thread_unblock(t);
     }
-    else{
+    else {
       e = list_next(e);
     }
   }
