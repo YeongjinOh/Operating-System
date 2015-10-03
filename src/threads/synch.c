@@ -207,27 +207,30 @@ lock_acquire (struct lock *lock)
   ASSERT (!lock_held_by_current_thread (lock));
 
   if (lock->holder != NULL)
-    {
+  {
       t->lock_waiting = lock;
       l = lock;
-      /* For nested priority donation. */
+      
+	  /* For nested priority donation. */
       while (l && t->priority > l->max_priority
              && depth++ < PRIDON_MAX_DEPTH)
-        {
+      {
           l->max_priority = t->priority;
-          thread_donate_priority (l->holder);
+          priority_donate (l->holder);
           l = l->holder->lock_waiting;
-        }
-    }
+      }
+  }
 
   sema_down (&lock->semaphore);
 
   old_level = intr_disable ();
+  
   t = thread_current ();
   t->lock_waiting = NULL;
   lock->max_priority = t->priority;
   thread_add_lock (lock);
   lock->holder = t;
+  
   intr_set_level (old_level);
 }
 
@@ -292,6 +295,7 @@ lock_priority_compare (const struct list_elem *a, const struct list_elem *b, voi
 {
   struct lock *la = list_entry (a, struct lock, elem);
   struct lock *lb = list_entry (b, struct lock, elem);
+  
   return la->max_priority > lb->max_priority;
 }
 

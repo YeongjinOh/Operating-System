@@ -110,6 +110,7 @@ struct thread
 
 	/* For priority donation */
 	int prev_priority;
+	
 	struct list locks;		/* Locks held by this thread */
 	struct lock *lock_waiting;	/* The lock this thread is waiting */
   };
