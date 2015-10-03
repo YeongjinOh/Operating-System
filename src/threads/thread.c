@@ -637,7 +637,7 @@ thread_wakeup(void){
   struct list_elem *e;
   int64_t current_time = timer_ticks();
   
-  for(e=list_begin(&wait_list); e != list_end(&wait_list);){
+  for(e=list_begin(&wait_list); e != list_end(&wait_list); ){
     struct thread *t = list_entry(e, struct thread, elem);
     
     if(t -> wait_length <= current_time){
