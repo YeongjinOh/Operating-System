@@ -361,12 +361,19 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority) 
 {
+  enum intr_level old_level = intr_disable ();
+  int old_priority = thread_current ()->priority;
+  
+  /* it has always to be updated. */
   thread_current ()->prev_priority = new_priority;
+
+  if (new_priority < old_priority && list_empty (&thread_current()->locks))
   thread_current ()->priority = new_priority;
   
   /* For priority scheduling when priority donation occurs */
   if (thread_current () != idle_thread)
 	thread_yield();
+  intr_set_level (old_level);
 }
 
 /* Returns the current thread's priority. */
@@ -546,28 +553,11 @@ thread_wait_cmp (const struct list_elem *a,
 void thread_sleep(int64_t sleep_ticks)
 { 
   struct thread *t = thread_current();
-  t -> wait_length = sleep_ticks; //sleep_ticks = timer_ticks() + ticks from sleep_timer
+  t -> wait_time = sleep_ticks; //sleep_ticks = timer_ticks() + ticks from sleep_timer
   
   // insert in sorted order to remove threads with higher prio
   list_insert_ordered (&wait_list, &t -> elem, priority_compare, NULL);
   thread_block();
-
-/* 
-  struct thread *cur = thread_current ();
-  // set up wait_length and wait_start appropriately 
-  // wait_length is time until thread needs to wake up from sleep to awake 
-  cur -> wait_flag = true;
-  cur -> wait_start = timer_ticks();
-  //printf("timer_ticks value: %d", timer_ticks());
-  cur -> wait_length = ticks;
-
-  // add thread to wait_list 
-  list_insert_ordered (&wait_list, &cur->wait_elem, thread_wait_cmp, NULL);
-
-  // block thread 
-  thread_block();
-  intr_set_level(old_level);
-*/
 }
 
 /* Returns true if T appears to point to a valid thread. */
@@ -624,13 +614,6 @@ alloc_frame (struct thread *t, size_t size)
 static struct thread *
 next_thread_to_run (void) 
 {
-/*
-  struct thread *t = (struct thread *) list_begin(&wait_list);
-  if (t->wait_flag == false) {
-    list_push_back(&ready_list, &t->elem);
-  }   
-*/
-  
   if (list_empty (&ready_list))
     return idle_thread;
   else
@@ -692,7 +675,7 @@ thread_wakeup(void)
   for(e=list_begin(&wait_list); e != list_end(&wait_list);) {
     struct thread *t = list_entry(e, struct thread, elem);
     
-    if (t -> wait_length <= current_time) {
+    if (t -> wait_time <= current_time) {
       e=list_remove(e);
       thread_unblock(t);
     }
