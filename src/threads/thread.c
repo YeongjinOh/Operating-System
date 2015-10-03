@@ -551,23 +551,6 @@ void thread_sleep(int64_t sleep_ticks)
   // insert in sorted order to remove threads with higher prio
   list_insert_ordered (&wait_list, &t -> elem, priority_compare, NULL);
   thread_block();
-
-/* 
-  struct thread *cur = thread_current ();
-  // set up wait_length and wait_start appropriately 
-  // wait_length is time until thread needs to wake up from sleep to awake 
-  cur -> wait_flag = true;
-  cur -> wait_start = timer_ticks();
-  //printf("timer_ticks value: %d", timer_ticks());
-  cur -> wait_length = ticks;
-
-  // add thread to wait_list 
-  list_insert_ordered (&wait_list, &cur->wait_elem, thread_wait_cmp, NULL);
-
-  // block thread 
-  thread_block();
-  intr_set_level(old_level);
-*/
 }
 
 /* Returns true if T appears to point to a valid thread. */
@@ -624,13 +607,6 @@ alloc_frame (struct thread *t, size_t size)
 static struct thread *
 next_thread_to_run (void) 
 {
-/*
-  struct thread *t = (struct thread *) list_begin(&wait_list);
-  if (t->wait_flag == false) {
-    list_push_back(&ready_list, &t->elem);
-  }   
-*/
-  
   if (list_empty (&ready_list))
     return idle_thread;
   else
