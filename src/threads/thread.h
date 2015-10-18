@@ -108,11 +108,14 @@ struct thread
     int64_t wait_time;     // time when thread stops waiting 
 
 
-	/* For priority donation */
-	int prev_priority;
-	
-	struct list locks;		/* Locks held by this thread */
-	struct lock *lock_waiting;	/* The lock this thread is waiting */
+    /* For priority donation */
+    int prev_priority;
+    
+    struct list locks;		/* Locks held by this thread */
+    struct lock *lock_waiting;	/* The lock this thread is waiting */
+
+    /* For file system calls */
+    struct list files;		/* Files list */
   };
 
 /* If false (default), use round-robin scheduler.
