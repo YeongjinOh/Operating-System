@@ -199,6 +199,8 @@ thread_create (const char *name, int priority,
   init_thread (t, name, priority);
   tid = t->tid = allocate_tid ();
 
+  enum intr_level old_level = intr_disable ();
+
   /* Stack frame for kernel_thread(). */
   kf = alloc_frame (t, sizeof *kf);
   kf->eip = NULL;
@@ -214,11 +216,17 @@ thread_create (const char *name, int priority,
   sf->eip = switch_entry;
   sf->ebp = 0;
 
+  t->parent = thread_current ();
+  list_push_back(&thread_current ()->locks, &t->child_elem);
+ 
+  intr_set_level (old_level);				   
+  
   /* Add to run queue. */
   thread_unblock (t);
 
   if (thread_current ()->priority < t->priority)
 	thread_yield ();
+
 
   return tid;
 }
@@ -313,6 +321,10 @@ thread_exit (void)
      when it calls thread_schedule_tail(). */
   intr_disable ();
   list_remove (&thread_current()->allelem);
+  
+  sema_up (&thread_current ()->wait_sema);
+  sema_up (&thread_current ()->parent->load_sema);
+
   thread_current ()->status = THREAD_DYING;
   schedule ();
   NOT_REACHED ();
@@ -594,7 +606,9 @@ init_thread (struct thread *t, const char *name, int priority)
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
   t->prev_priority = priority;
+  sema_init(&t->wait_sema, 0);
   list_init (&t->locks);
+  sema_init(&t->wait_sema, 0);
   t->lock_waiting = NULL;
   t->magic = THREAD_MAGIC;
 
@@ -669,7 +683,7 @@ thread_schedule_tail (struct thread *prev)
      pull out the rug under itself.  (We don't free
      initial_thread because its memory was not obtained via
      palloc().) */
-  if (prev != NULL && prev->status == THREAD_DYING && prev != initial_thread) 
+  if (prev != NULL && prev->status == THREAD_DYING && prev != initial_thread && prev->parent == NULL) 
     {
       ASSERT (prev != cur);
       palloc_free_page (prev);
