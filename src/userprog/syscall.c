@@ -153,8 +153,7 @@ int write (int fd, const void *buffer, unsigned length)
       written += length;
     }
     lock_release(&filesys_lock);
-  } else if(fd == 2) exit(-1); // stderr
-  else  // write to a file
+  } else  // write to a file
   {
     struct file_elem *fe = find_file_elem(fd);
     if(fe==NULL) exit(-1);
@@ -184,4 +183,105 @@ struct file_elem * find_file_elem(int fd)
   return NULL;
 }
 
+
+bool create (const char *file, unsigned initial_size)
+{
+  bool ret;
+  if(!file) exit(-1);
+  else
+  {
+    lock_acquire(&filesys_lock);
+    ret = filesys_create(file, initial_size);
+    lock_release(&filesys_lock);
+  }
+  return ret;
+}
+
+
+bool remove (const char *file)
+{
+  bool ret;
+  if(!file) exit(-1);
+  else
+  {
+    lock_acquire(&filesys_lock);
+    ret = filesys_remove(file);
+    lock_release(&filesys_lock);
+  }
+  return ret;
+}
+
+
+int open (const char *file)
+{
+  struct file *f;
+  struct file_elem *fe;
+  
+  if(!file) return -1; // input name is null
+  
+  lock_acquire(&filesys_lock);
+  f = filesys_open(file);
+  lock_release(&filesys_lock);
+
+  if(!f) return -1; // fail to open file
+
+  fe = (struct file_elem *)malloc(sizeof(struct file_elem));
+
+  if(!fe) // fail to allocate memory
+  {
+    file_close(file)
+    return -1; 
+  }
+
+  lock_acquire(&filesys_lock);
+  fe->fd = alloc_fd();
+  fe->file = f;
+  list_push_back(&thread_current()->files, &fe->thread_elem);
+  lock_release(&filesys_lock);
+
+  return fe->fd;
+}
+
+
+/* returns allocated fd value */
+int alloc_fd()
+{
+  static fd = 2;
+  return fd++;
+}
+
+/* returns file size */
+int filesize (int fd)
+{
+  struct file_elem *fe = find_file_elem(fd);
+  if(!fe) exit(-1);
+  return file_length(fe->file);
+}
+
+/* returns the number of bytes actually read 
+   returns -1 if it could not be read */
+int read (int fd, void *buffer, unsigned length)
+{
+  int ret = 0;
+  struct file_elem *fe;
+  
+  if(fd == 0)  //stdin
+  {
+   
+  } else if(fd == 1) return -1; // stdout
+  else
+  {
+    lock_acquire(&filesys_lock);
+    fe = find_file_elem(fd);
+    if(!fe)
+    { 
+      lock_release(&filesys_lock);
+      return -1;
+    }
+    ret = file_read(fe->file, buffer, length);
+    lock_release(&filesys_lock);
+  }
+
+  return ret;
+}
 
