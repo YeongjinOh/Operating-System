@@ -4,6 +4,7 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
+#include "synch.h"
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -110,12 +111,18 @@ struct thread
 
     /* For priority donation */
     int prev_priority;
-    
+
     struct list locks;		/* Locks held by this thread */
     struct lock *lock_waiting;	/* The lock this thread is waiting */
 
     /* For file system calls */
-    struct list files;		/* Files list */
+    struct list files;  /* Files list */
+
+    struct semaphore wait_sema;
+    struct semaphore load_sema;
+    int exit_status;
+    struct thread *parent;
+    struct list_elem child_elem;
   };
 
 /* If false (default), use round-robin scheduler.
