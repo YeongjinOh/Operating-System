@@ -41,7 +41,7 @@ void close (int fd);
 void check_valid_address(void *address);  
 struct file_elem * find_file_elem(int fd);
 
-static struct lock filesys_lock;
+static struct lock filesys_lock;  // lock for file system
 
 void
 syscall_init (void) 
@@ -264,10 +264,17 @@ int read (int fd, void *buffer, unsigned length)
 {
   int ret = 0;
   struct file_elem *fe;
+  unsigned i;
+
+  if(!is_user_vaddr(buffer)||(!is_user_vaddr(buffer+length))) return -1; // buffer is not in user virtual address
   
   if(fd == 0)  //stdin
   {
-   
+    for(i=0; i<length; i++)
+    {
+      buffer[i] = inputgetc();
+    }
+    ret = length;
   } else if(fd == 1) return -1; // stdout
   else
   {
@@ -283,5 +290,44 @@ int read (int fd, void *buffer, unsigned length)
   }
 
   return ret;
+}
+
+
+void seek (int fd, unsigned position)
+{
+  struct file_elem *fe = find_file_elem(fd);
+  if(!fe) exit(-1); // if the file could not be found, call exit(-1)
+  struct file *f = fe->file;
+  lock_acquire(&filesys_lock);
+  file_seek(f, position);
+  lock_release(&filesys_lock);
+}
+
+
+unsigned tell (int fd)
+{ 
+  unsigned ret;
+  struct file_elem *fe = find_file_elem(fd);
+  if(!fe) exit(-1); // if the file could not be found, call exit(-1)
+  struct file *f = fe->file;
+  lock_acquire(&filesys_lock);
+  ret = file_tell(f);
+  lock_release(&filesys_lock);
+
+  return ret;
+}
+
+void close (int fd)
+{
+  struct file_elem *fe = find_file_elem(fd);
+  if(!fe) exit(-1); // if the file could not be found, call exit(-1)
+  struct file *f = fe->file;
+  
+  lock_acquire(&filesys_lock);
+  file_close(f, position);
+  list_remove(&fe->thread_elem);
+  lock_release(&filesys_lock);
+  
+  free(fe);
 }
 
