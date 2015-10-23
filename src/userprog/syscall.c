@@ -214,6 +214,7 @@ bool remove (const char *file)
 }
 
 
+//open file
 int open (const char *file)
 {
   struct file *f;
