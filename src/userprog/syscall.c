@@ -9,6 +9,7 @@
 #include "filesys/file.h"
 #include "filesys/filesys.h"
 #include "threads/synch.h"
+#include "devices/input.h"
 
 static void syscall_handler (struct intr_frame *);
 
@@ -40,6 +41,7 @@ void close (int fd);
 
 void check_valid_address(void *address);  
 struct file_elem * find_file_elem(int fd);
+int alloc_fd(void);
 
 static struct lock filesys_lock;  // lock for file system
 
@@ -229,7 +231,7 @@ int open (const char *file)
 
   if(!fe) // fail to allocate memory
   {
-    file_close(file)
+    file_close(f);
     return -1; 
   }
 
@@ -244,9 +246,9 @@ int open (const char *file)
 
 
 /* returns allocated fd value */
-int alloc_fd()
+int alloc_fd(void)
 {
-  static fd = 2;
+  static int fd = 2;
   return fd++;
 }
 
@@ -272,7 +274,7 @@ int read (int fd, void *buffer, unsigned length)
   {
     for(i=0; i<length; i++)
     {
-      buffer[i] = inputgetc();
+      *(uint8_t *)(buffer + i) = input_getc();
     }
     ret = length;
   } else if(fd == 1) return -1; // stdout
@@ -324,7 +326,7 @@ void close (int fd)
   struct file *f = fe->file;
   
   lock_acquire(&filesys_lock);
-  file_close(f, position);
+  file_close(f);
   list_remove(&fe->thread_elem);
   lock_release(&filesys_lock);
   
