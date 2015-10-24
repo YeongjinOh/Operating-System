@@ -86,10 +86,11 @@ set_args_onto_stack(void **esp, const char *file_name, char *save_ptr)
   char *token;
  
   char **argv = (char **) malloc (max_args_count * sizeof (char *));
- 
+  char *addrs[max_args_count];
+
   /* push argv values onto stack. */
   int cnt = 0;
-  printf("file_name : %s\n", file_name);
+  //printf("file_name : %s\n", file_name);
   argv[cnt] = file_name;
   cnt++;
   token = strtok_r (NULL, " ", &save_ptr);
@@ -103,46 +104,46 @@ set_args_onto_stack(void **esp, const char *file_name, char *save_ptr)
 	token = strtok_r (NULL, " ", &save_ptr);
   }
   int argc = cnt;
-  printf("argc : %d\n", argc);
-  argv[argc] = 0;
-
+  //printf("argc : %d\n", argc);
+ 
+  addrs[argc] = 0;
   for (cnt = argc - 1; cnt >= 0; cnt--) {
 	 *esp -= (strlen (argv[cnt]) + 1);
-	 memcpy (*esp, &argv[cnt], strlen (argv[cnt]) + 1);
-	 printf("token : %s, %x\n", argv[cnt], *esp);
+	 addrs[cnt] = *esp;
+	 memcpy (*esp, argv[cnt], strlen (argv[cnt]) + 1);
+	 //printf("token : %s, addr : %x, %x\n", *esp, addrs[cnt], *esp);
   }
   
   /* push word_align onto stack. */
   int word_align = 4 - (PHYS_BASE - *esp) % 4;
   if (word_align != 0) {
     *esp -= word_align;
-    memcpy (*esp, &argv[argc], word_align);
-	printf("word_align : %d, %x\n", word_align, *esp);
+    memcpy (*esp, &addrs[argc], word_align);
+	//printf("word_align : %d, %x\n", word_align, *esp);
   }
 
   /* push the address of elements of argv array onto stack. */
   for (cnt = argc; cnt >= 0; cnt--) {
   	*esp -= (sizeof (char *));
-	memcpy (*esp, &argv[cnt], sizeof (char *));
-	printf("args(%d) : %s, %x\n", cnt, argv[cnt], *esp);
+	memcpy (*esp, &addrs[cnt], sizeof (char *));
+	//printf("args(%d) : %p, %x\n", cnt, addrs[cnt], *esp);
   }
 
   /* push the address of argv array onto stack. */
   char **argv_array_address = *esp;
   *esp -= (sizeof (char **));
   memcpy(*esp, &argv_array_address, sizeof (char **));
-  printf("argv : %x, %x\n", argv_array_address, *esp);
+  //printf("argv : %x, %x\n", argv_array_address, *esp);
 
   /* push argc value onto stack. */
   *esp -= (sizeof (int));
   memcpy(*esp, &argc, sizeof (int));
-  printf("argc : %d, %x\n", argc, *esp);
+  //printf("argc : %d, %x\n", argc, *esp);
 
   /* push return address onto stack. */
   *esp -= (sizeof (void *));
-  memcpy(*esp, &argv[argc], sizeof (void *));
-  printf("return address : %d, %x\n", argv[argc], *esp);
-
+  memcpy(*esp, &addrs[argc], sizeof (void *));
+  //printf("return address : %d, %x\n", addrs[argc], *esp);
 
   free(argv);
 }

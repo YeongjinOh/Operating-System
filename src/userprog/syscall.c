@@ -57,7 +57,7 @@ syscall_init (void)
    if so, call exit(-1) */
 void check_valid_address(void *address)  
 {
-  printf("userprog/syscall.c	check_valid_address\n");  
+  //printf("userprog/syscall.c	check_valid_address\n");  
   if(!address) exit(-1);
   else if(!is_user_vaddr(address)) exit(-1);
   return;
@@ -67,7 +67,7 @@ void check_valid_address(void *address)
 static void
 syscall_handler (struct intr_frame *f UNUSED) 
 {
-  printf("userprog/syscall.c	syscall_handler\n");  
+ // printf("userprog/syscall.c	syscall_handler\n");  
   int nsyscall, ret;
   int *esp = (int *)f->esp;
 
@@ -131,13 +131,13 @@ syscall_handler (struct intr_frame *f UNUSED)
 
 void halt (void)
 {
-  printf("userprog/syscall.c	halt\n");  
+  //printf("userprog/syscall.c	halt\n");  
   shutdown_power_off();
 }
 
 void exit (int status)
 {
-  printf("userprog/syscall.c	exit\n");  
+  //printf("userprog/syscall.c	exit\n");  
   struct thread *t = thread_current();
   t->exit_status = status;
   printf ("%s: exit(%d)\n",t->name,status);
@@ -146,7 +146,7 @@ void exit (int status)
 
 pid_t exec (const char *file)
 {
-  printf("userprog/syscall.c	exec\n");  
+  //printf("userprog/syscall.c	exec\n");  
   pid_t pid;
   check_valid_address(file);
   lock_acquire (&filesys_lock);  /* Do not allow file IO until process is loaded */
@@ -157,7 +157,7 @@ pid_t exec (const char *file)
 
 int wait (pid_t pid)
 {
-  printf("userprog/syscall.c	wait\n");  
+  //printf("userprog/syscall.c	wait\n");  
   return process_wait (pid);
 }
 
@@ -168,7 +168,7 @@ int wait (pid_t pid)
 // when it cannot be written, exit(-1) or written = 0 or written = -1?
 int write (int fd, const void *buffer, unsigned length)
 {
-  printf("userprog/syscall.c	Write / fd : %d, buffer : %x, length : %d\n",fd,buffer,length);
+  //printf("userprog/syscall.c	Write / fd : %d, buffer : %x, length : %d\n",fd,buffer,length);
   int written = 0;
   if(fd == 0) exit(-1);// write to input (error)
   else if(fd == 1)  // write to console
@@ -223,7 +223,7 @@ struct file_elem * find_file_elem(int fd)
 
 bool create (const char *file, unsigned initial_size)
 {
-  printf("userprog/syscall.c	create\n");  
+  //printf("userprog/syscall.c	create\n");  
   bool ret;
   if(!file) exit(-1);
   else
@@ -238,7 +238,7 @@ bool create (const char *file, unsigned initial_size)
 
 bool remove (const char *file)
 {
-  printf("userprog/syscall.c	remove\n");  
+  //printf("userprog/syscall.c	remove\n");  
   bool ret;
   if(!file) exit(-1);
   else
@@ -254,7 +254,7 @@ bool remove (const char *file)
 //open file
 int open (const char *file)
 {
-  printf("userprog/syscall.c	open\n");  
+  //printf("userprog/syscall.c	open\n");  
   struct file *f;
   struct file_elem *fe;
   
@@ -303,7 +303,7 @@ int filesize (int fd)
    returns -1 if it could not be read */
 int read (int fd, void *buffer, unsigned length)
 {
-  printf("userprog/syscall.c	read\n");  
+  //printf("userprog/syscall.c	read\n");  
   int ret = 0;
   struct file_elem *fe;
   unsigned i;
@@ -337,7 +337,7 @@ int read (int fd, void *buffer, unsigned length)
 
 void seek (int fd, unsigned position)
 {
-  printf("userprog/syscall.c	seek\n");  
+  //printf("userprog/syscall.c	seek\n");  
   struct file_elem *fe = find_file_elem(fd);
   if(!fe) exit(-1); // if the file could not be found, call exit(-1)
   struct file *f = fe->file;
@@ -349,7 +349,7 @@ void seek (int fd, unsigned position)
 
 unsigned tell (int fd)
 { 
-  printf("userprog/syscall.c	tell\n");  
+  //printf("userprog/syscall.c	tell\n");  
   unsigned ret;
   struct file_elem *fe = find_file_elem(fd);
   if(!fe) exit(-1); // if the file could not be found, call exit(-1)
@@ -363,7 +363,7 @@ unsigned tell (int fd)
 
 void close (int fd)
 {
-  printf("userprog/syscall.c	close\n");  
+  //printf("userprog/syscall.c	close\n");  
   struct file_elem *fe = find_file_elem(fd);
   if(!fe) exit(-1); // if the file could not be found, call exit(-1)
   struct file *f = fe->file;
