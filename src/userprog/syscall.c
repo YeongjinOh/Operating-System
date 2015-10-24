@@ -57,9 +57,10 @@ syscall_init (void)
    if so, call exit(-1) */
 void check_valid_address(void *address)  
 {
+  struct thread *t = thread_current();
   //printf("userprog/syscall.c	check_valid_address\n");  
-  if(!address) exit(-1);
-  else if(!is_user_vaddr(address)) exit(-1);
+  if(!address || !is_user_vaddr(address) || pagedir_get_page (t->pagedir, address) == NULL) exit(-1);
+  //else if(!is_user_vaddr(*(char *)address)) exit(-1);
   return;
 }
 
@@ -67,6 +68,7 @@ void check_valid_address(void *address)
 static void
 syscall_handler (struct intr_frame *f UNUSED) 
 {
+  ASSERT (f!=NULL);
  // printf("userprog/syscall.c	syscall_handler\n");  
   int nsyscall, ret;
   int *esp = (int *)f->esp;
@@ -81,18 +83,21 @@ syscall_handler (struct intr_frame *f UNUSED)
       halt();
       break;
     case SYS_EXIT:
-      exit(*(esp+1));
+      check_valid_address((int *)(esp+1));
+      exit(*(int *)(esp+1));
       break;
     case SYS_EXEC:
       check_valid_address((char *)*(esp+1));
       ret = exec((char *)*(esp+1));
       break;
     case SYS_WAIT:
+      check_valid_address((pid_t *)(esp+1));
       ret = wait(*(esp+1));
       break;	
 
     case SYS_CREATE:
       check_valid_address((char *)*(esp+1));
+      check_valid_address((unsigned *)(esp+2));
       ret = create((char *)*(esp+1), *(esp+2));
       break;
     case SYS_REMOVE:
@@ -104,24 +109,37 @@ syscall_handler (struct intr_frame *f UNUSED)
       ret = open((char *)*(esp+1));
       break;
     case SYS_FILESIZE:
+      check_valid_address((int *)(esp+1));
       ret = filesize(*(esp+1));
       break;
     case SYS_READ:
+      check_valid_address((int *)(esp+1));
       check_valid_address((char *)*(esp+2));
+      check_valid_address((unsigned *)(esp+3));
       ret = read(*(esp+1), (char *)*(esp+2), *(esp+3));
       break;
     case SYS_WRITE:
+      check_valid_address((int *)(esp+1));
       check_valid_address((char *)*(esp+2));
+      check_valid_address((unsigned *)(esp+3));
       ret = write(*(esp+1), (char *)*(esp+2), *(esp+3));
       break;
     case SYS_SEEK:
+      check_valid_address((int *)(esp+1));
+      check_valid_address((unsigned *)(esp+2));
       seek(*(esp+1), *(esp+2));
       break;
     case SYS_TELL:
+      check_valid_address((int *)(esp+1));
       ret = tell(*(esp+1));
       break;
     case SYS_CLOSE:
+      check_valid_address((int *)(esp+1));
       close(*(esp+1));
+      break;
+
+    default:
+      exit(-1);
       break;
   }  
   f->eax = ret;
@@ -262,7 +280,7 @@ int open (const char *file)
   
   lock_acquire(&filesys_lock);
   f = filesys_open(file);
-  lock_release(&filesys_lock);
+  //lock_release(&filesys_lock);
 
   if(!f) return -1; // fail to open file
 
@@ -271,10 +289,10 @@ int open (const char *file)
   if(!fe) // fail to allocate memory
   {
     file_close(f);
+    lock_release(&filesys_lock);
     return -1; 
   }
 
-  lock_acquire(&filesys_lock);
   fe->fd = alloc_fd();
   fe->file = f;
   list_push_back(&thread_current()->files, &fe->thread_elem);
