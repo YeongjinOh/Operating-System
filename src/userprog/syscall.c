@@ -276,13 +276,17 @@ int open (const char *file)
   struct file *f;
   struct file_elem *fe;
   
-  if(!file) return -1; // input name is null
+  if(!file || strlen(file) == 0 ) return -1; // input name is null or empty
   
   lock_acquire(&filesys_lock);
   f = filesys_open(file);
   //lock_release(&filesys_lock);
 
-  if(!f) return -1; // fail to open file
+  if(!f)
+  { 
+    lock_release(&filesys_lock);
+    return -1; // fail to open file
+  }
 
   fe = (struct file_elem *)malloc(sizeof(struct file_elem));
 
