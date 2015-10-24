@@ -127,6 +127,34 @@ syscall_handler (struct intr_frame *f UNUSED)
 
 /* Process System Calls */
 
+void halt (void)
+{
+  shutdown_power_off();
+}
+
+void exit (int status)
+{
+  struct thread *t = thread_current();
+  t->exit_status = status;
+  printf ("%s: exit(%d)\n",t->name,status);
+  thread_exit ();
+}
+
+pid_t exec (const char *file)
+{
+  pid_t pid;
+  check_valid_address(file);
+  lock_acquire (&filesys_lock);  /* Do not allow file IO until process is loaded */
+  pid = process_execute (file);
+  lock_release (&filesys_lock);
+  return pid;
+}
+
+int wait (pid_t pid)
+{
+  return process_wait (pid);
+}
+
 
 
 /* File System Calls */

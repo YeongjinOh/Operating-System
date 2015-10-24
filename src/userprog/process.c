@@ -194,7 +194,7 @@ start_process (void *file_name_)
    This function will be implemented in problem 2-2.  For now, it
    does nothing. */
 int
-process_wait (tid_t child_tid UNUSED) 
+process_wait (tid_t child_tid) 
 {
   int status = -1;
   struct thread *child = get_child_by_tid (child_tid);
@@ -202,7 +202,7 @@ process_wait (tid_t child_tid UNUSED)
   if (child != NULL)
   {
 	/* wait for process to complete */
-    sema_down (&child->wait_sema);
+	sema_down (&child->wait_sema);
 	status = child->exit_status;
 	list_remove (&child->child_elem);
 	
@@ -219,7 +219,7 @@ get_child_by_tid (tid_t tid)
   struct list_elem *e;
   struct thread *t = thread_current ();
 
-  for (e = list_begin (&t->locks); e != list_end (&t->locks); e = list_next (e))
+  for (e = list_begin (&t->children); e != list_end (&t->children); e = list_next (e))
   {
     struct thread *child = list_entry (e, struct thread, child_elem);
     if (child->tid == tid)

@@ -312,6 +312,9 @@ thread_exit (void)
 {
   ASSERT (!intr_context ());
 
+  struct thread *cur = thread_current ();
+
+
 #ifdef USERPROG
   process_exit ();
 #endif
@@ -320,6 +323,21 @@ thread_exit (void)
      and schedule another process.  That process will destroy us
      when it calls thread_schedule_tail(). */
   intr_disable ();
+
+  if (!list_empty (&cur->children))
+  {
+    struct list_elem *e;
+    for (e = list_begin (&cur->children); e != list_end (&cur->children);
+           e = list_next (e))
+    {
+      struct thread * c = list_entry (e, struct thread, child_elem);
+      /* Reap dying child */
+      if (c->status == THREAD_DYING)
+        palloc_free_page (c);
+      else
+        c->parent = NULL;
+    }
+  }
   list_remove (&thread_current()->allelem);
   
   sema_up (&thread_current ()->wait_sema);

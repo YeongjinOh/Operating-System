@@ -122,6 +122,8 @@ struct thread
     struct semaphore load_sema;
     int exit_status;
     struct thread *parent;
+    struct list children;
+
     struct list_elem child_elem;
   };
 
