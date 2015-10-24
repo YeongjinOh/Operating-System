@@ -217,7 +217,7 @@ thread_create (const char *name, int priority,
   sf->ebp = 0;
 
   t->parent = thread_current ();
-  list_push_back(&thread_current ()->locks, &t->child_elem);
+  list_push_back(&thread_current ()->children, &t->child_elem);
  
   intr_set_level (old_level);				   
   
@@ -313,6 +313,7 @@ thread_exit (void)
   ASSERT (!intr_context ());
 
   struct thread *cur = thread_current ();
+  enum intr_level old_level;
 
 
 #ifdef USERPROG
@@ -322,7 +323,7 @@ thread_exit (void)
   /* Remove thread from all threads list, set our status to dying,
      and schedule another process.  That process will destroy us
      when it calls thread_schedule_tail(). */
-  intr_disable ();
+  old_level =  intr_disable ();
 
   if (!list_empty (&cur->children))
   {
@@ -345,6 +346,7 @@ thread_exit (void)
 
   thread_current ()->status = THREAD_DYING;
   schedule ();
+  intr_set_level (old_level); 
   NOT_REACHED ();
 }
 
@@ -626,6 +628,7 @@ init_thread (struct thread *t, const char *name, int priority)
   t->prev_priority = priority;
   sema_init(&t->wait_sema, 0);
   list_init (&t->locks);
+  list_init (&t->children);
   sema_init(&t->wait_sema, 0);
   t->lock_waiting = NULL;
   t->magic = THREAD_MAGIC;
