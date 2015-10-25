@@ -58,9 +58,7 @@ syscall_init (void)
 void check_valid_address(void *address)  
 {
   struct thread *t = thread_current();
-  //printf("userprog/syscall.c	check_valid_address\n");  
   if(!address || !is_user_vaddr(address) || pagedir_get_page (t->pagedir, address) == NULL) exit(-1);
-  //else if(!is_user_vaddr(*(char *)address)) exit(-1);
   return;
 }
 
@@ -68,8 +66,6 @@ void check_valid_address(void *address)
 static void
 syscall_handler (struct intr_frame *f UNUSED) 
 {
-  ASSERT (f!=NULL);
- // printf("userprog/syscall.c	syscall_handler\n");  
   int nsyscall, ret;
   int *esp = (int *)f->esp;
 
@@ -145,7 +141,7 @@ syscall_handler (struct intr_frame *f UNUSED)
   f->eax = ret;
 }
 
-/* Process System Calls */
+/**** Process System Calls ****/
 
 void halt (void)
 {
@@ -181,12 +177,12 @@ int wait (pid_t pid)
 
 
 
-/* File System Calls */
+/**** File System Calls ****/
 
-// when it cannot be written, exit(-1) or written = 0 or written = -1?
+/* write system call,
+   returns the number of bytes which are actually written */
 int write (int fd, const void *buffer, unsigned length)
 {
-  //printf("userprog/syscall.c	Write / fd : %d, buffer : %x, length : %d\n",fd,buffer,length);
   int written = 0;
   if(fd == 0) exit(-1);// write to input (error)
   else if(fd == 1)  // write to console
@@ -224,7 +220,8 @@ int write (int fd, const void *buffer, unsigned length)
   return written;
 }
 
-// find a file_elem by fd
+
+/* find a file_elem by fd */
 struct file_elem * find_file_elem(int fd)
 {
   struct list_elem *e;
@@ -239,9 +236,9 @@ struct file_elem * find_file_elem(int fd)
 }
 
 
+/* create system call, if succeeds, returns true */
 bool create (const char *file, unsigned initial_size)
 {
-  //printf("userprog/syscall.c	create\n");  
   bool ret;
   if(!file) exit(-1);
   else
@@ -254,9 +251,9 @@ bool create (const char *file, unsigned initial_size)
 }
 
 
+/* remove system call, if succeeds, returns true */
 bool remove (const char *file)
 {
-  //printf("userprog/syscall.c	remove\n");  
   bool ret;
   if(!file) exit(-1);
   else
@@ -269,10 +266,10 @@ bool remove (const char *file)
 }
 
 
-//open file
+/* open system call
+  if succeeds returns its file descriptor. if not, returns -1 */
 int open (const char *file)
 {
-  //printf("userprog/syscall.c	open\n");  
   struct file *f;
   struct file_elem *fe;
   
@@ -280,7 +277,6 @@ int open (const char *file)
   
   lock_acquire(&filesys_lock);
   f = filesys_open(file);
-  //lock_release(&filesys_lock);
 
   if(!f)
   { 
@@ -321,11 +317,11 @@ int filesize (int fd)
   return file_length(fe->file);
 }
 
+
 /* returns the number of bytes actually read 
    returns -1 if it could not be read */
 int read (int fd, void *buffer, unsigned length)
 {
-  //printf("userprog/syscall.c	read\n");  
   int ret = 0;
   struct file_elem *fe;
   unsigned i;
@@ -356,10 +352,9 @@ int read (int fd, void *buffer, unsigned length)
   return ret;
 }
 
-
+/* seek system call */
 void seek (int fd, unsigned position)
 {
-  //printf("userprog/syscall.c	seek\n");  
   struct file_elem *fe = find_file_elem(fd);
   if(!fe) exit(-1); // if the file could not be found, call exit(-1)
   struct file *f = fe->file;
@@ -369,9 +364,9 @@ void seek (int fd, unsigned position)
 }
 
 
+/* tell system call */
 unsigned tell (int fd)
 { 
-  //printf("userprog/syscall.c	tell\n");  
   unsigned ret;
   struct file_elem *fe = find_file_elem(fd);
   if(!fe) exit(-1); // if the file could not be found, call exit(-1)
@@ -383,9 +378,10 @@ unsigned tell (int fd)
   return ret;
 }
 
+
+/* close system call */
 void close (int fd)
 {
-  //printf("userprog/syscall.c	close\n");  
   struct file_elem *fe = find_file_elem(fd);
   if(!fe) exit(-1); // if the file could not be found, call exit(-1)
   struct file *f = fe->file;
