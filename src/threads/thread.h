@@ -15,6 +15,14 @@ enum thread_status
     THREAD_DYING        /* About to be destroyed. */
   };
 
+enum process_status
+  {
+    TASK_STOPPED, 	/* Stopped and waiting for child process. */
+    TASK_RUNNING,	/* Running process. */
+    TASK_READY,		/* Not running but ready to run. */
+    TASK_ZOMBIE		/* Process about to exit */
+  };
+
 /* Thread identifier type.
    You can redefine this to whatever type you like. */
 typedef int tid_t;
@@ -117,13 +125,18 @@ struct thread
 
     /* For process system calls */
 
-    struct semaphore wait_sema;	/* Semaphore in child */
-    struct semaphore load_sema; /* Semaphore in parent */
-    int exit_status;		/* Exit status returned when it exits */
+    enum process_status process_status;          /* Process states. */
+    
+    /* Needed for parent process */
     struct list children;	/* List of children */	
     struct list_elem child_elem;
-    struct thread *parent;	/* Parent of this process */
+    struct semaphore load_sema; /* Semaphore in parent */
 
+    /* Needed for child process */
+    struct thread *parent;	/* Parent of this process */
+    int exit_status;		/* Exit status returned when it exits */
+    struct semaphore wait_sema;	/* Semaphore in child */
+    
     struct file* executable;	/* To deny other process to executables */
 
     /* For file system calls */

@@ -52,7 +52,8 @@ process_execute (const char *file_name)
   char *save_ptr;
   file_name = strtok_r (fn_m, " ", &save_ptr);  
 
-  sema_init (&thread_current ()->load_sema, 0);
+  struct thread *cur = thread_current ();
+  sema_init (&cur->load_sema, 0);
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
 
@@ -63,8 +64,8 @@ process_execute (const char *file_name)
 	  palloc_free_page (fn_copy);
 	  return tid;
      }
-
-  sema_down (&thread_current ()->load_sema);
+  cur->process_status = TASK_STOPPED;
+  sema_down (&cur->load_sema);
   struct thread *child = get_child_by_tid (TID_ERROR);
   palloc_free_page (fn_m);
   palloc_free_page (fn_copy);
@@ -173,9 +174,7 @@ start_process (void *file_name_)
 	thread_current ()->tid = TID_ERROR;
 	thread_exit ();
   }
-
-  sema_up (&thread_current ()->parent->load_sema);
-  
+  sema_up(&cur->parent->load_sema);
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
      threads/intr-stubs.S).  Because intr_exit takes all of its
@@ -200,11 +199,13 @@ process_wait (tid_t child_tid)
 {
   int status = -1;
   struct thread *child = get_child_by_tid (child_tid);
-  
+  struct thread *cur = thread_current ();  
+
   if (child != NULL)
   {
-	/* wait for process to complete */
-	sema_down (&child->wait_sema);
+	/* Wait for child process to complete */
+	cur->process_status = TASK_STOPPED;
+  	sema_down (&child->wait_sema);
 	status = child->exit_status;
 	list_remove (&child->child_elem);
 	
@@ -237,26 +238,28 @@ process_exit (void)
 //  printf("%s\n", "process_exit");
   struct thread *cur = thread_current ();
   uint32_t *pd;
- 
+  /* Release child process's resource */  
+  if (!list_empty (&cur->children))
+    {
+	  struct list_elem *e;
+	  for (e = list_begin (&cur->children);
+					  e != list_end (&cur->children);
+					  e = list_next (e))
+	  {
+	    struct thread *child = list_entry (e, struct thread, child_elem);
+		child->parent = NULL;
+		if (child->process_status == TASK_ZOMBIE)
+		  palloc_free_page (child);
+      }
+    }
+  cur->parent->process_status = TASK_RUNNING;
+  cur->process_status = TASK_ZOMBIE;
 
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
 
   pd = cur->pagedir;
-  
-  if (!list_empty (&cur->locks))
-    {
-	  struct list_elem *e;
-	  for (e = list_begin (&cur->locks);
-					  e != list_end (&cur->locks);
-					  e = list_next (e))
-	  {
-	    struct thread *child = list_entry (e, struct thread, child_elem);
-		child->parent = NULL;
-		if (child->status == THREAD_DYING)
-		  palloc_free_page (child);
-      }
-    }
+
   if (pd != NULL) 
     {
       /* Correct ordering here is crucial.  We must set

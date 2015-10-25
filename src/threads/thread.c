@@ -220,6 +220,7 @@ thread_create (const char *name, int priority,
   t->parent = thread_current ();
   list_push_back(&thread_current ()->children, &t->child_elem);
  
+ 
   intr_set_level (old_level);				   
   
   /* Add to run queue. */
@@ -326,22 +327,7 @@ thread_exit (void)
      when it calls thread_schedule_tail(). */
   old_level =  intr_disable ();
 
-  if (!list_empty (&cur->children))
-  {
-    struct list_elem *e;
-    for (e = list_begin (&cur->children); e != list_end (&cur->children);
-           e = list_next (e))
-    {
-      struct thread * c = list_entry (e, struct thread, child_elem);
-      /* Reap dying child */
-      if (c->status == THREAD_DYING)
-        palloc_free_page (c);
-      else
-        c->parent = NULL;
-    }
-  }
   list_remove (&thread_current()->allelem);
-  
   sema_up (&thread_current ()->wait_sema);
   sema_up (&thread_current ()->parent->load_sema);
 
@@ -349,7 +335,8 @@ thread_exit (void)
 //  if(cur->executable != NULL)
 //	file_close(cur->executable);
 
-  thread_current ()->status = THREAD_DYING;
+  cur->status = THREAD_DYING;
+  
   schedule ();
   intr_set_level (old_level); 
   NOT_REACHED ();
@@ -639,6 +626,7 @@ init_thread (struct thread *t, const char *name, int priority)
   t->lock_waiting = NULL;
   t->magic = THREAD_MAGIC;
 
+  t->process_status = TASK_READY;
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
   intr_set_level (old_level);
