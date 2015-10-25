@@ -216,6 +216,7 @@ thread_create (const char *name, int priority,
   sf->eip = switch_entry;
   sf->ebp = 0;
 
+//  t->executable = NULL;
   t->parent = thread_current ();
   list_push_back(&thread_current ()->children, &t->child_elem);
  
@@ -343,6 +344,10 @@ thread_exit (void)
   
   sema_up (&thread_current ()->wait_sema);
   sema_up (&thread_current ()->parent->load_sema);
+
+  /* Stop denying and allow write */
+//  if(cur->executable != NULL)
+//	file_close(cur->executable);
 
   thread_current ()->status = THREAD_DYING;
   schedule ();

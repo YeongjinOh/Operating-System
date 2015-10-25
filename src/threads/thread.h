@@ -115,16 +115,20 @@ struct thread
     struct list locks;		/* Locks held by this thread */
     struct lock *lock_waiting;	/* The lock this thread is waiting */
 
+    /* For process system calls */
+
+    struct semaphore wait_sema;	/* Semaphore in child */
+    struct semaphore load_sema; /* Semaphore in parent */
+    int exit_status;		/* Exit status returned when it exits */
+    struct list children;	/* List of children */	
+    struct list_elem child_elem;
+    struct thread *parent;	/* Parent of this process */
+
+    struct file* executable;	/* To deny other process to executables */
+
     /* For file system calls */
     struct list files;  /* Files list */
-
-    struct semaphore wait_sema;
-    struct semaphore load_sema;
-    int exit_status;
-    struct thread *parent;
-    struct list children;
-
-    struct list_elem child_elem;
+	
   };
 
 /* If false (default), use round-robin scheduler.

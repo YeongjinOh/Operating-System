@@ -43,7 +43,6 @@ void check_valid_address(void *address);
 struct file_elem * find_file_elem(int fd);
 int alloc_fd(void);
 
-static struct lock filesys_lock;  // lock for file system
 
 void
 syscall_init (void) 

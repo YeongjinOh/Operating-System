@@ -1,4 +1,5 @@
 #include "userprog/process.h"
+#include "userprog/syscall.h"
 #include <debug.h>
 #include <inttypes.h>
 #include <round.h>
@@ -233,12 +234,14 @@ get_child_by_tid (tid_t tid)
 void
 process_exit (void)
 {
-  //printf("%s\n", "process_exit");
+//  printf("%s\n", "process_exit");
   struct thread *cur = thread_current ();
   uint32_t *pd;
  
+
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
+
   pd = cur->pagedir;
   
   if (!list_empty (&cur->locks))
@@ -386,6 +389,12 @@ load (const char *file_name, void (**eip) (void), void **esp)
       printf ("load: %s: open failed\n", file_name);
       goto done; 
     }
+  
+  /* To prevent write operations of file's underlying inode
+     until file_allow_write() is called or file is closed. */
+  file_deny_write(file);
+  t->executable = file;
+
 
   /* Read and verify executable header. */
   if (file_read (file, &ehdr, sizeof ehdr) != sizeof ehdr
