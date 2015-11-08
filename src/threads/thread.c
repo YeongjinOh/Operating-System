@@ -332,8 +332,8 @@ thread_exit (void)
   sema_up (&thread_current ()->parent->load_sema);
 
   /* Stop denying and allow write */
-//  if(cur->executable != NULL)
-//	file_close(cur->executable);
+  if(cur->executable != NULL)
+	file_close(cur->executable);
 
   cur->status = THREAD_DYING;
   
