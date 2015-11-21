@@ -8,19 +8,16 @@
 #include "threads/malloc.h"
 #include "filesys/file.h"
 #include "filesys/filesys.h"
+#include "filesys/directory.h"
+#include "filesys/inode.h"
 #include "threads/synch.h"
 #include "devices/input.h"
+#include "devices/block.h"
+#include "userprog/process.h"
 
 static void syscall_handler (struct intr_frame *);
 
 typedef int pid_t;
-
-struct file_elem
-{
-  int fd;				// file descriptor
-  struct file *file;			// pointer to file
-  struct list_elem thread_elem;		// list element for thread's 'files' list
-};
 
 // Process System Calls 
 void halt (void) NO_RETURN;
@@ -43,6 +40,11 @@ void check_valid_address(void *address);
 struct file_elem * find_file_elem(int fd);
 int alloc_fd(void);
 
+bool chdir(const char *);
+bool mkdir(const char *);
+bool readdir(int, const char *);
+bool isdir(int);
+bool inumber(int);
 
 void
 syscall_init (void) 
@@ -132,7 +134,27 @@ syscall_handler (struct intr_frame *f UNUSED)
       check_valid_address((int *)(esp+1));
       close(*(esp+1));
       break;
-
+    case SYS_CHDIR:
+      check_valid_address((char *)*(esp+1));
+      ret = chdir((char *)*(esp+1));
+      break;
+    case SYS_MKDIR:
+      check_valid_address((char *)*(esp+1));
+      ret = mkdir((char *)*(esp+1));
+      break;
+    case SYS_READDIR:
+      check_valid_address((int *)(esp+1));
+      check_valid_address((char *)*(esp+2));
+      ret = readdir((int *)(esp+1), (char *)*(esp+2));
+      break;
+    case SYS_ISDIR:
+      check_valid_address((int *)(esp+1));
+      ret = isdir((int *)(esp+1));
+      break;
+    case SYS_INUMBER:
+      check_valid_address((int *)(esp+1));
+      ret = inumber((int *)(esp+1));
+      break;
     default:
       exit(-1);
       break;
@@ -243,7 +265,7 @@ bool create (const char *file, unsigned initial_size)
   else
   {
     lock_acquire(&filesys_lock);
-    ret = filesys_create(file, initial_size);
+    ret = filesys_create(file, initial_size, false);
     lock_release(&filesys_lock);
   }
   return ret;
@@ -269,32 +291,42 @@ bool remove (const char *file)
   if succeeds returns its file descriptor. if not, returns -1 */
 int open (const char *file)
 {
+  //printf("hi!\n");
   struct file *f;
   struct file_elem *fe;
-  
+
   if(!file || strlen(file) == 0 ) return -1; // input name is null or empty
-  
+
   lock_acquire(&filesys_lock);
   f = filesys_open(file);
+  lock_release(&filesys_lock);
 
-  if(!f)
-  { 
-    lock_release(&filesys_lock);
-    return -1; // fail to open file
-  }
+  if(!f) return -1;
 
   fe = (struct file_elem *)malloc(sizeof(struct file_elem));
 
   if(!fe) // fail to allocate memory
   {
     file_close(f);
-    lock_release(&filesys_lock);
     return -1; 
   }
 
-  fe->fd = alloc_fd();
-  fe->file = f;
-  list_push_back(&thread_current()->files, &fe->thread_elem);
+  lock_acquire(&filesys_lock);
+
+  if(inode_is_dir(file_get_inode(f)))
+  {
+    fe->dir = (struct dir *)f;
+    fe->isdir = true;
+    fe->fd = alloc_fd();
+    list_push_back(&thread_current()->files, &fe->thread_elem);
+  }
+  else
+  {
+    fe->file = f;
+    fe->isdir = false;
+    fe->fd = alloc_fd();
+    list_push_back(&thread_current()->files, &fe->thread_elem);
+  }
   lock_release(&filesys_lock);
 
   return fe->fd;
@@ -383,13 +415,60 @@ void close (int fd)
 {
   struct file_elem *fe = find_file_elem(fd);
   if(!fe) exit(-1); // if the file could not be found, call exit(-1)
-  struct file *f = fe->file;
-  
+
   lock_acquire(&filesys_lock);
-  file_close(f);
+  if(fe->isdir)
+  {
+    dir_close(fe->dir);
+  }
+  else
+  {
+    file_close(fe->file);
+  }
+
   list_remove(&fe->thread_elem);
   lock_release(&filesys_lock);
-  
+
   free(fe);
 }
 
+bool chdir(const char *dir)
+{
+  return filesys_chdir(dir);
+}
+
+bool mkdir(const char *dir)
+{
+  return filesys_create(dir, 0, true);
+}
+
+bool readdir(int fd, const char *name)
+{
+  struct file_elem *fe = find_file_elem(fd);
+
+  if(!fe) return false;
+  if(!fe->isdir) return false;
+  if(!dir_readdir(fe->dir, name)) return false;
+
+  return true;
+}
+
+bool isdir(int fd)
+{
+  struct file_elem *fe = find_file_elem(fd);
+
+  if(!fe) return false;
+  return fe->isdir;
+}
+
+bool inumber(int fd)
+{
+  block_sector_t inumber;
+  struct file_elem *fe = find_file_elem(fd);
+
+  if(!fe) return false;
+  if(fe->isdir) inumber = inode_get_inumber(dir_get_inode(fe->dir));
+  else inumber = inode_get_inumber(file_get_inode(fe->file));
+
+  return inumber;
+}

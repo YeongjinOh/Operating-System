@@ -6,11 +6,21 @@
 #include "filesys/free-map.h"
 #include "filesys/inode.h"
 #include "filesys/directory.h"
+#include "threads/thread.h"
+#include "threads/malloc.h"
 
 /* Partition that contains the file system. */
 struct block *fs_device;
 
 static void do_format (void);
+
+/* New Implement for Prj 4 */
+//struct dir *get_containing_dir(const char *); // return the directory which contains the file 
+//char *get_file_name(const char *); // extract file name from the whole path argument
+//both are in directory.c
+
+// modified filesys_create, filesys_open, filesys_remove
+
 
 /* Initializes the file system module.
    If FORMAT is true, reformats the file system. */
@@ -43,18 +53,21 @@ filesys_done (void)
    Fails if a file named NAME already exists,
    or if internal memory allocation fails. */
 bool
-filesys_create (const char *name, off_t initial_size) 
+filesys_create (const char *name, off_t initial_size, bool is_dir) 
 {
   block_sector_t inode_sector = 0;
-  struct dir *dir = dir_open_root ();
+  struct dir *dir = get_containing_dir(name);
+  char *file_name = get_file_name(name);
+
+  if(strcmp(file_name, ".") == 0 || strcmp(file_name, "..") == 0) return false;
   bool success = (dir != NULL
-                  && free_map_allocate (1, &inode_sector)
-                  && inode_create (inode_sector, initial_size)
-                  && dir_add (dir, name, inode_sector));
+      && free_map_allocate (1, &inode_sector)
+      && inode_create (inode_sector, initial_size, is_dir)
+      && dir_add (dir, file_name, inode_sector));
   if (!success && inode_sector != 0) 
     free_map_release (inode_sector, 1);
   dir_close (dir);
-
+  free(file_name);
   return success;
 }
 
@@ -66,13 +79,38 @@ filesys_create (const char *name, off_t initial_size)
 struct file *
 filesys_open (const char *name)
 {
-  struct dir *dir = dir_open_root ();
+  struct dir *dir = get_containing_dir(name);
+  char *file_name = get_file_name(name);
+
   struct inode *inode = NULL;
 
   if (dir != NULL)
-    dir_lookup (dir, name, &inode);
+  {
+    if(strcmp(file_name, "..") == 0)
+    {
+      if(!dir_get_parent(dir, &inode))
+      {
+	free(file_name);
+	return NULL;
+      }
+    }
+    else if(strcmp(file_name, ".") == 0)
+    {
+      free(file_name);
+      return (struct file *) dir;
+    }
+    else if(dir_is_root(dir) && strlen(file_name) == 0)
+    {
+      free(file_name);
+      return (struct file *) dir;
+    }
+    dir_lookup (dir, file_name, &inode);
+  }
   dir_close (dir);
+  free(file_name);
 
+  if(!inode) return NULL;
+  if(inode_is_dir(inode)) return (struct file *) dir_open(inode);
   return file_open (inode);
 }
 
@@ -83,15 +121,69 @@ filesys_open (const char *name)
 bool
 filesys_remove (const char *name) 
 {
-  struct dir *dir = dir_open_root ();
-  bool success = dir != NULL && dir_remove (dir, name);
+  struct dir *dir = get_containing_dir(name);
+  char *file_name = get_file_name(name);
+
+  bool success = dir != NULL && dir_remove (dir, file_name);
   dir_close (dir); 
+  free(file_name);
 
   return success;
 }
+
+/* changes the current working directory to path */
+bool filesys_chdir(const char *path)
+{
+  struct dir *dir = get_containing_dir(path);
+  char *file_name = get_file_name(path);
+  struct inode *inode = NULL;
+  struct thread *cur = thread_current();
+
+  if (dir != NULL)
+  {
+    if(strcmp(file_name, "..") == 0)
+    {
+      if(!dir_get_parent(dir, &inode))
+      {
+	free(file_name);
+	return false;
+      }
+    }
+    else if(strcmp(file_name, ".") == 0)
+    {
+      cur->cwd = dir;
+      free(file_name);
+      return true;
+    }
+    else if(dir_is_root(dir) && strlen(file_name) == 0)
+    {
+      cur->cwd = dir;
+      free(file_name);
+      return true;
+    }
+    else
+    {
+      dir_lookup (dir, file_name, &inode);
+    }
+  }
+
+  dir_close(dir);
+  free(file_name);
+
+  dir = dir_open(inode);
+  if(dir != NULL) 
+  {
+    dir_close(cur->cwd);
+    cur->cwd = dir;
+    return true;
+  }
+
+  return false;
+}
+
 
 /* Formats the file system. */
-static void
+  static void
 do_format (void)
 {
   printf ("Formatting file system...");

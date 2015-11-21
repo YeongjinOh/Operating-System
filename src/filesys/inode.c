@@ -438,7 +438,7 @@ inode_write_at (struct inode *inode, const void *buffer_, off_t size,
     if(!inode->isdir)
       lock_acquire(&inode->lock);
     add_inode_size(&inode->data, offset + size);
-    if(!inode_isdir)
+    if(!inode->isdir)
       lock_release(&inode->lock);  
   }
 

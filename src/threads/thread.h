@@ -141,7 +141,8 @@ struct thread
 
     /* For file system calls */
     struct list files;  /* Files list */
-	
+
+    struct dir *cwd; /* current working directory of the thread */
   };
 
 /* If false (default), use round-robin scheduler.

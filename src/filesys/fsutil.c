@@ -17,7 +17,7 @@ fsutil_ls (char **argv UNUSED)
 {
   struct dir *dir;
   char name[NAME_MAX + 1];
-  
+
   printf ("Files in the root directory:\n");
   dir = dir_open_root ();
   if (dir == NULL)
@@ -34,7 +34,7 @@ void
 fsutil_cat (char **argv)
 {
   const char *file_name = argv[1];
-  
+
   struct file *file;
   char *buffer;
 
@@ -44,14 +44,14 @@ fsutil_cat (char **argv)
     PANIC ("%s: open failed", file_name);
   buffer = palloc_get_page (PAL_ASSERT);
   for (;;) 
-    {
-      off_t pos = file_tell (file);
-      off_t n = file_read (file, buffer, PGSIZE);
-      if (n == 0)
-        break;
+  {
+    off_t pos = file_tell (file);
+    off_t n = file_read (file, buffer, PGSIZE);
+    if (n == 0)
+      break;
 
-      hex_dump (pos, buffer, n, true); 
-    }
+    hex_dump (pos, buffer, n, true); 
+  }
   palloc_free_page (buffer);
   file_close (file);
 }
@@ -61,7 +61,7 @@ void
 fsutil_rm (char **argv) 
 {
   const char *file_name = argv[1];
-  
+
   printf ("Deleting '%s'...\n", file_name);
   if (!filesys_remove (file_name))
     PANIC ("%s: delete failed\n", file_name);
@@ -89,58 +89,58 @@ fsutil_extract (char **argv UNUSED)
     PANIC ("couldn't open scratch device");
 
   printf ("Extracting ustar archive from scratch device "
-          "into file system...\n");
+      "into file system...\n");
 
   for (;;)
+  {
+    const char *file_name;
+    const char *error;
+    enum ustar_type type;
+    int size;
+
+    /* Read and parse ustar header. */
+    block_read (src, sector++, header);
+    error = ustar_parse_header (header, &file_name, &type, &size);
+    if (error != NULL)
+      PANIC ("bad ustar header in sector %"PRDSNu" (%s)", sector - 1, error);
+
+    if (type == USTAR_EOF)
     {
-      const char *file_name;
-      const char *error;
-      enum ustar_type type;
-      int size;
-
-      /* Read and parse ustar header. */
-      block_read (src, sector++, header);
-      error = ustar_parse_header (header, &file_name, &type, &size);
-      if (error != NULL)
-        PANIC ("bad ustar header in sector %"PRDSNu" (%s)", sector - 1, error);
-
-      if (type == USTAR_EOF)
-        {
-          /* End of archive. */
-          break;
-        }
-      else if (type == USTAR_DIRECTORY)
-        printf ("ignoring directory %s\n", file_name);
-      else if (type == USTAR_REGULAR)
-        {
-          struct file *dst;
-
-          printf ("Putting '%s' into the file system...\n", file_name);
-
-          /* Create destination file. */
-          if (!filesys_create (file_name, size))
-            PANIC ("%s: create failed", file_name);
-          dst = filesys_open (file_name);
-          if (dst == NULL)
-            PANIC ("%s: open failed", file_name);
-
-          /* Do copy. */
-          while (size > 0)
-            {
-              int chunk_size = (size > BLOCK_SECTOR_SIZE
-                                ? BLOCK_SECTOR_SIZE
-                                : size);
-              block_read (src, sector++, data);
-              if (file_write (dst, data, chunk_size) != chunk_size)
-                PANIC ("%s: write failed with %d bytes unwritten",
-                       file_name, size);
-              size -= chunk_size;
-            }
-
-          /* Finish up. */
-          file_close (dst);
-        }
+      /* End of archive. */
+      break;
     }
+    else if (type == USTAR_DIRECTORY)
+      printf ("ignoring directory %s\n", file_name);
+    else if (type == USTAR_REGULAR)
+    {
+      struct file *dst;
+
+      printf ("Putting '%s' into the file system...\n", file_name);
+
+      /* Create destination file. */
+      if (!filesys_create (file_name, size, false))
+	PANIC ("%s: create failed", file_name);
+      dst = filesys_open (file_name);
+      if (dst == NULL)
+	PANIC ("%s: open failed", file_name);
+
+      /* Do copy. */
+      while (size > 0)
+      {
+	int chunk_size = (size > BLOCK_SECTOR_SIZE
+	    ? BLOCK_SECTOR_SIZE
+	    : size);
+	block_read (src, sector++, data);
+	if (file_write (dst, data, chunk_size) != chunk_size)
+	  PANIC ("%s: write failed with %d bytes unwritten",
+	      file_name, size);
+	size -= chunk_size;
+      }
+
+      /* Finish up. */
+      file_close (dst);
+    }
+  }
 
   /* Erase the ustar header from the start of the block device,
      so that the extraction operation is idempotent.  We erase
@@ -157,7 +157,6 @@ fsutil_extract (char **argv UNUSED)
 
 /* Copies file FILE_NAME from the file system to the scratch
    device, in ustar format.
-
    The first call to this function will write starting at the
    beginning of the scratch device.  Later calls advance across
    the device.  This position is independent of that used for
@@ -191,7 +190,7 @@ fsutil_append (char **argv)
   dst = block_get_role (BLOCK_SCRATCH);
   if (dst == NULL)
     PANIC ("couldn't open scratch device");
-  
+
   /* Write ustar header to first sector. */
   if (!ustar_make_header (file_name, USTAR_REGULAR, size, buffer))
     PANIC ("%s: name too long for ustar format", file_name);
@@ -199,16 +198,16 @@ fsutil_append (char **argv)
 
   /* Do copy. */
   while (size > 0) 
-    {
-      int chunk_size = size > BLOCK_SECTOR_SIZE ? BLOCK_SECTOR_SIZE : size;
-      if (sector >= block_size (dst))
-        PANIC ("%s: out of space on scratch device", file_name);
-      if (file_read (src, buffer, chunk_size) != chunk_size)
-        PANIC ("%s: read failed with %"PROTd" bytes unread", file_name, size);
-      memset (buffer + chunk_size, 0, BLOCK_SECTOR_SIZE - chunk_size);
-      block_write (dst, sector++, buffer);
-      size -= chunk_size;
-    }
+  {
+    int chunk_size = size > BLOCK_SECTOR_SIZE ? BLOCK_SECTOR_SIZE : size;
+    if (sector >= block_size (dst))
+      PANIC ("%s: out of space on scratch device", file_name);
+    if (file_read (src, buffer, chunk_size) != chunk_size)
+      PANIC ("%s: read failed with %"PROTd" bytes unread", file_name, size);
+    memset (buffer + chunk_size, 0, BLOCK_SECTOR_SIZE - chunk_size);
+    block_write (dst, sector++, buffer);
+    size -= chunk_size;
+  }
 
   /* Write ustar end-of-archive marker, which is two consecutive
      sectors full of zeros.  Don't advance our position past

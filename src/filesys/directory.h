@@ -27,4 +27,11 @@ bool dir_add (struct dir *, const char *name, block_sector_t);
 bool dir_remove (struct dir *, const char *name);
 bool dir_readdir (struct dir *, char name[NAME_MAX + 1]);
 
+
+/* New implemented */
+bool dir_is_empty (struct inode *);
+bool dir_is_root (struct dir *);
+bool dir_get_parent (struct dir *, struct inode **);
+struct dir *get_containing_dir(const char *); // return the directory which contains the file 
+char *get_file_name(const char *); // extract file name from the whole path argument
 #endif /* filesys/directory.h */

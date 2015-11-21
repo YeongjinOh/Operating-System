@@ -174,6 +174,9 @@ start_process (void *file_name_)
 	thread_current ()->tid = TID_ERROR;
 	thread_exit ();
   }
+
+  if(!thread_current()->cwd) thread_current()->cwd = dir_open_root();
+
   sema_up(&cur->parent->load_sema);
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
@@ -238,20 +241,24 @@ process_exit (void)
 //  printf("%s\n", "process_exit");
   struct thread *cur = thread_current ();
   uint32_t *pd;
+
   /* Release child process's resource */  
   if (!list_empty (&cur->children))
+  {
+    struct list_elem *e;
+    for (e = list_begin (&cur->children);
+	e != list_end (&cur->children);
+	e = list_next (e))
     {
-	  struct list_elem *e;
-	  for (e = list_begin (&cur->children);
-					  e != list_end (&cur->children);
-					  e = list_next (e))
-	  {
-	    struct thread *child = list_entry (e, struct thread, child_elem);
-		child->parent = NULL;
-		if (child->process_status == TASK_ZOMBIE)
-		  palloc_free_page (child);
-      }
+      struct thread *child = list_entry (e, struct thread, child_elem);
+      child->parent = NULL;
+      if (child->process_status == TASK_ZOMBIE)
+	palloc_free_page (child);
     }
+  }
+
+  if(cur->cwd) dir_close(cur->cwd);
+
   cur->parent->process_status = TASK_RUNNING;
   cur->process_status = TASK_ZOMBIE;
 
