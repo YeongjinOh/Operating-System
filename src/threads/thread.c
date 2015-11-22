@@ -222,8 +222,10 @@ thread_create (const char *name, int priority,
   t->parent = thread_current ();
   list_push_back(&thread_current ()->children, &t->child_elem);
 
-  if(thread_current()->cwd) t->cwd = dir_reopen(thread_current()->cwd);
-  else t->cwd = NULL;
+  if(thread_current()->cwd)
+    t->cwd = dir_reopen(thread_current()->cwd);
+  else 
+    t->cwd = NULL;
  
   intr_set_level (old_level);				   
   

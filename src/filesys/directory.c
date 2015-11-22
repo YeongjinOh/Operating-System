@@ -213,6 +213,10 @@ dir_remove (struct dir *dir, const char *name)
   if(inode_is_dir(inode) && inode_get_open_cnt(inode) > 1)
     goto done;
 
+  /* disallow deletion of root dir */
+  if(inode_is_dir(inode) && inode_get_inumber(inode) == 1)
+    goto done;
+  
   /* a directory can be deleted only when it is empty */
   if(inode_is_dir(inode) && !dir_is_empty(inode))
     goto done;

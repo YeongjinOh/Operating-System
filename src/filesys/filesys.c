@@ -58,6 +58,8 @@ filesys_create (const char *name, off_t initial_size, bool is_dir)
   block_sector_t inode_sector = 0;
   struct dir *dir = get_containing_dir(name);
   char *file_name = get_file_name(name);
+  
+  //if(strcmp(name, "") == 0) return false;
 
   if(strcmp(file_name, ".") == 0 || strcmp(file_name, "..") == 0) return false;
   bool success = (dir != NULL

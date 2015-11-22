@@ -439,6 +439,7 @@ bool chdir(const char *dir)
 
 bool mkdir(const char *dir)
 {
+  if(strcmp(dir, "") == 0) return false;
   return filesys_create(dir, 0, true);
 }
 
