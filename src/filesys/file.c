@@ -18,6 +18,10 @@ struct file *
 file_open (struct inode *inode) 
 {
   struct file *file = calloc (1, sizeof *file);
+
+     //printf("file_open function : deny_wrtie : %s\n\n", file->deny_write ? "true" : "false");
+
+
   if (inode != NULL && file != NULL)
     {
       file->inode = inode;
@@ -45,7 +49,10 @@ file_reopen (struct file *file)
 void
 file_close (struct file *file) 
 {
-  if (file != NULL)
+  
+   //printf("File_close function : deny_wrtie : %s\n\n", file->deny_write ? "true" : "false");
+
+    if (file != NULL)
     {
       file_allow_write (file);
       inode_close (file->inode);
@@ -118,6 +125,8 @@ file_write_at (struct file *file, const void *buffer, off_t size,
 void
 file_deny_write (struct file *file) 
 {
+	  //printf("file_deny_write function : denyt_write : %s\n\n ", file->deny_write ? "true" : "false");
+	
   ASSERT (file != NULL);
   if (!file->deny_write) 
     {
@@ -132,6 +141,8 @@ file_deny_write (struct file *file)
 void
 file_allow_write (struct file *file) 
 {
+  //printf("file_allow_write function : deny_wrtie : %s\n\n", file->deny_write ? "true" : "false");
+
   ASSERT (file != NULL);
   if (file->deny_write) 
     {

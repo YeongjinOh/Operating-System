@@ -275,9 +275,9 @@ inode_open (block_sector_t sector)
   inode->open_cnt = 1;
   inode->deny_write_cnt = 0;
   inode->removed = false;
+  block_read (fs_device, inode->sector, &inode->data);
   inode->isdir = inode->data.isdir;
   inode->parent = inode->data.parent;
-  block_read (fs_device, inode->sector, &inode->data);
   lock_init(&inode->lock);
   return inode;
 }
@@ -510,6 +510,7 @@ void
 inode_allow_write (struct inode *inode) 
 {
   ASSERT (inode->deny_write_cnt > 0);
+//	printf("inode->deny_write_cnt = %d\n\n",inode->deny_write_cnt);
   ASSERT (inode->deny_write_cnt <= inode->open_cnt);
   inode->deny_write_cnt--;
 }

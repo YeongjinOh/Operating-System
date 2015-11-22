@@ -38,6 +38,8 @@ dir_create (block_sector_t sector, size_t entry_cnt)
 struct dir *
 dir_open (struct inode *inode) 
 {
+   //printf("dir_ope function\n\n");
+
   struct dir *dir = calloc (1, sizeof *dir);
   if (inode != NULL && dir != NULL)
   {
@@ -253,8 +255,8 @@ dir_readdir (struct dir *dir, char name[NAME_MAX + 1])
 bool dir_is_root (struct dir *dir)
 { 
   if(!dir) return false;
-  if(inode_get_inumber(dir_get_inode(dir)) == ROOT_DIR_SECTOR) return false;
-  return true;
+  if(inode_get_inumber(dir_get_inode(dir)) == ROOT_DIR_SECTOR) return true;
+  return false;
 }
 
 /* Returns true if it succeeds in saving parent dir inode. Otherwise returns false */
